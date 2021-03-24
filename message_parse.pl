@@ -15,7 +15,7 @@ use constant FILE => {
 my ($operation) = @ARGV;
 if ($operation eq 'load')
 {
-	system('nc -ld 127.0.0.1 39998 > ' . FILE->{MESSAGE} . ' &');
+	system('nc -l 127.0.0.1 -p 39998 > ' . FILE->{MESSAGE} . ' &');
 	system('echo \'{"messageID":0}\' | nc -w3 127.0.0.1 39999');
 
 	open my $file, '< ' . FILE->{MESSAGE};
@@ -24,18 +24,26 @@ if ($operation eq 'load')
 
 	my @scripts;
 	my @guis;
-	if ($json_ref->{messageID} == 1)
+	my @guids;
+
+	if (defined($json_ref) and $json_ref->{messageID} == 1)
 	{
 		foreach (@{$json_ref->{scriptStates}})
 		{
-			my $script_name = $_->{name} // $_->{guid};
-
-			my $script_data = $_->{script};
+			my $script_name = $_->{name} // 'Undefined';
+			my $script_data = $_->{script} // 'Undefined';
 			push @scripts, (my $script = FILE->{SCRIPTS_DIR} . "/$script_name.lua");
 			open my $script_f, '> ' . $script;
 			print $script_f $script_data;
 			close $script_f;
 			
+			# Create guid files to associate guid with gameobjects
+			my $script_guid = $_->{guid} // 'Undefined';
+			push @guids, (my $guid = FILE->{SCRIPTS_DIR} . "/$script_name.guid");
+			open my $guid_f, '> ' . $guid;
+			print $guid_f $script_guid;
+			close $guid_f;
+
 			my $gui_data = $_->{gui} // '';
 			push @guis, (my $gui = FILE->{GUI_DIR}. "/$script_name.xml");
 			open my $gui_f, '> ' . $gui;
@@ -58,7 +66,10 @@ if ($operation eq 'save')
 		my $script_data = eval{local $/ = undef;  <$script_f> };
 		close $script_f;
 		my $script_name = eval{$_ =~ /^.*\/(.*)\.lua$/; $1};
-		my $guid = (($script_name eq 'Global') ? '-1' : $script_name);
+
+		open my $guid_f, "< ./cache/script/$script_name" . ".guid";
+		my $guid = eval{<$guid_f>} // '-1';
+		close $guid_f;
 
 		my $script_state = {name => $script_name,
 							guid => $guid,
@@ -74,6 +85,3 @@ if ($operation eq 'save')
 	
 	system("nc -w3 127.0.0.1 39999 < " . FILE->{MESSAGE})
 }
-			
-
-	
