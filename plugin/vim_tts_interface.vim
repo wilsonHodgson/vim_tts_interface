@@ -1,9 +1,12 @@
 let s:path = fnamemodify(resolve(expand('<sfile>:p')), ':h')
 let s:message_parse = s:path . '/../message_parse.pl'
+let s:script_cache = s:path . '/../cache/script/'
 
 function! GetTTSCode()
-	let l:files = system("perl " . s:message_parse . " load")
-	execute("e " . l:files)
+	echom system("perl " . s:message_parse . " load")
+	let l:files = (fnameescape(s:script_cache) . '/*.lua')
+	execute("args " . l:files)
+	execute("argdo e")
 
 endfunction
 

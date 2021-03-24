@@ -51,7 +51,6 @@ if ($operation eq 'load')
 			close $gui_f;
 		}
 	}
-	print join(' ', @scripts);
 }
 if ($operation eq 'save')
 {
